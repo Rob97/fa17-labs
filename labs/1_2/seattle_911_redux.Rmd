@@ -1,0 +1,147 @@
+---
+title: "Understanding 911 calls around UW"
+output: html_notebook
+---
+_This analysis adapte from [Walking the Beat: Mining Seattle’s Police Report Data](https://www.bayesimpact.org/stories/?name=walking-the-beat-mining-seattles-police-report-data) by Jeff Wong_
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+# 1. Including a few packages
+```{r}
+options(warn=-1) #supressing warnings
+
+if (!require(dplyr)) { install.packages('dplyr'); require(dplyr) }
+if (!require(ggplot2)) { install.packages('ggplot2'); require(ggplot2) }
+
+if (!require(reshape2)) { install.packages('reshape2'); require(reshape2) }
+if (!require(devtools)) { install.packages('devtools'); require(devtools) }
+if (!require(ggmap)) { install.packages('ggmap'); require(ggmap) }
+if (!require(glmnet)) { install.packages('glmnet'); require(glmnet) }
+if (!require(fields)) { install.packages('fields'); require(fields) }
+if (!require(lubridate)) { install.packages('lubridate'); require(lubridate) }
+```
+
+# 2. Loading the data
+```{r}
+if (!require(ggplot2)) { install.packages('ggplot2'); require(ggplot2) } 
+MGH_LONGITUDE = -122.307987
+MGH_LATITUDE = 47.655038
+
+PATH_DATA_MGH_TINY = paste(getwd(), "/data/Seattle_Police_Department_911_Incident_Response_Near_MGH_tiny.csv", sep = "")
+
+if(file.exists(PATH_DATA_MGH_TINY)){ # switch variable to PATH_DATA_MGH_TINY if there are issues with scale of data
+  data_mgh <- read.csv(PATH_DATA_MGH_TINY, header=T, sep=",")
+} else {
+  print("data file not found")
+}
+
+#adding columns to the data
+data_mgh$at_scene_time_ts = as.POSIXct(strptime(data_mgh$At.Scene.Time, "%m/%d/%Y %I:%M:%S %p")) #converting time from String to date and time representation (POSIXct)
+data_mgh$at_scene_time_hr = hour(ymd_hms(as.character(data_mgh$at_scene_time_ts)))
+data_mgh$at_scene_time_date = as.Date(data_mgh$at_scene_time_ts)
+# data$at_scene_time_week = floor(as.numeric(data_mgh$at_scene_time_date - min(data_mgh$at_scene_time_date, na.rm=TRUE)) / 7) + 1
+data_mgh$event_clearance_ts = as.POSIXct(strptime(data_mgh$Event.Clearance.Date, "%m/%d/%Y %I:%M:%S %p"))
+data_mgh$event_clearance_date = as.Date(data_mgh$event_clearance_ts)
+data_mgh$event_clearance_hr = hour(ymd_hms(as.character(data_mgh$event_clearance_ts)))
+data_mgh$time_until_event_clear = as.numeric(data_mgh$event_clearance_ts - data_mgh$at_scene_time_ts)
+data_mgh$Initial.Type.Group = factor(data_mgh$Initial.Type.Group)
+data_mgh$Event.Clearance.Group = factor(data_mgh$Event.Clearance.Group)
+data_mgh$Zone.Beat = factor(data_mgh$Zone.Beat)
+data_mgh$Latitude = round(data_mgh$Latitude, 3)
+data_mgh$Longitude = round(data_mgh$Longitude, 3)
+
+View(data_mgh)
+```
+
+# 3. Missing Data
+Missing data can be a problem. If a large proportion of data is missing, we may end with results that are not representative of the population.
+
+*TODO* There are several options for date/time (at_scene_time_ts, event_clearance_ts). Figure out what proportion of reports have values. 
+_hint_: Use the sum() and is.na() functions!
+```{r}
+total_reports = nrow(data)
+total_reports
+
+# write code below!
+(total_reports - 1) / total_reports # replace 1 with your code to get proportion of rows that have at_scene_time_ts
+(total_reports - 1) / total_reports # replace 1 with your code to get proportion of rows that have at_scene_time_ts
+
+```
+
+#4. Frequency Tables
+Frequency tables are a common way to analyze data. For example, Event.Clearance.Group tells you the type of crime that was reported. Each row in a frequency table would give you the number of reports for a certain type of crime. Let's look at that frequency table.
+
+The data.table package helps you create frequency tables in R. Run the first line to read the documentation on it, then run the 2nd line to install and include the package (installation make take a moment).
+```{r}
+?data.table
+if (!require(data.table)) { install.packages('data.table'); require(data.table) }
+
+#Here, we use the table() method to create a frequency table for types of crime
+freq_of_crimes <- table(data_mgh[, "Event.Clearance.Group"])
+
+# let's look at our frequency table!  
+View(freq_of_crimes)
+```
+
+
+
+#5. Frequency of Crimes by Day of Week
+Let's do a quick sanity check of our data by looking at the number of reports by day of week. Because police services are available every day of the week, we would expect at least some reports occuring each day of the week. Run the code below to verify that.
+```{r}
+# first, let's convert the dates we have (event_clerance_date, e.g. "07/19/2010 05:04:00 AM") to days of the week (e.g. "Monday")
+# the weekdays() method does that for us
+crimes_by_day_of_week <- weekdays(data_mgh$event_clearance_date)
+
+# TODO: Create a frequency table of crimes by day of week
+freq_crimes_by_dow <- data.frame() #replace "data.frame()" with your code!
+
+# Now let's look at the frequency table!
+View(freq_crimes_by_dow)
+
+# Now let's plot this data. We haven't covered plotting too much, so be sure to ask questions about what's going on here!
+ggplot(as.data.frame(freq_crimes_by_dow),
+       aes(x = crimes_by_day_of_week, y = Freq)) +
+  geom_bar(stat = 'identity') + # create bar plot
+  xlab ("Day of Week") + ylab("Count") #labeling axis
+```
+
+
+#6. Frequency of Crimes by Time of Day
+Perhaps we should have more officers patroling during times of day which are high crime. 
+*TODO* Plot the number of reported incidents by hour of day and see what suggestions you may make. 
+
+_hint_ this code should look similar to the previous block (Frequency of Crimes by Day of Week).
+_challenge_: Crime by time of day may vary by weekend days and weekdays. Plot the crime by times of day for weekdays and weekend days separately.
+```{r}
+# Your code below!
+
+```
+
+#7. Types of contacts
+Not all crime is the same! Let's see the frequency of each type of crime. We provide a function ggplot.freqtable.1d to generate the plot. Run the code below.
+```{r}
+# Get a frequency table of each type of crime.
+
+crimes_by_type <- data.frame() #TODO: replace data.frame()
+
+ggplot(as.data.frame(crimes_by_type),
+       aes(x = Var1, y = Freq)) +
+  geom_bar(stat = 'identity') + # create bar plot
+  xlab ("Day of Week") + ylab("Count") + #labeling axis
+  coord_flip()
+```
+
+#8. Digging deeper in the type of event
+There are a lot of "Disturbances" and "Suspicious Circumstances" reported, but what does that mean? The "Event Clearance Description" field may provide more information. 
+
+*TODO*: For all crimes which are labeled as "Disturbances", create a frequency table of the descriptions of crimes which are disturbances (Event.Clearance.Description)
+_hint_: Filter the data by `Event Clearance Group`
+_challenge_: Do the same analysis for the "Suspicious Circumstances" group.
+```{r}
+#TODO
+
+```
+
+
