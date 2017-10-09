@@ -1,0 +1,56 @@
+---
+title: "Lab 2.2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Using Prior Distributions for Inference
+```{r}
+# define grid
+size_of_grid = 20
+lowest_value_of_p = 0
+highest_value_of_p = 1
+#which index is which value for p? 
+#like a lookup table for p
+parameter_grid_for_p <- seq( from=lowest_value_of_p , to=highest_value_of_p , length.out=size_of_grid )
+plot(parameter_grid_for_p)
+prior_for_parameter_p <- rep( 1 , 20 )
+plot(prior_for_parameter_p)
+# we'll just call it prior for short
+prior <- prior_for_parameter_p
+# compute likelihood at each value in grid
+likelihood <- dbinom( 6 , size=9 , prob=parameter_grid_for_p )
+# compute product of likelihood and prior
+unstd.posterior <- likelihood * prior
+# standardize the posterior, so it sums to 1
+posterior <- unstd.posterior / sum(unstd.posterior)
+## R code 2.4
+plot( parameter_grid_for_p , posterior , type="b" ,
+    xlab="probability of water" , ylab="posterior probability" )
+mtext( "20 points" )
+```
+
+## Other Priors
+```{r}
+prior_with_zero <- ifelse( parameter_grid_for_p < 0.5 , 0 , 1 )
+prior_sharp <- exp( -5*abs( parameter_grid_for_p - 0.5 ) )
+# try the same inferences above using these. we'll increase the grid size to make the approximation better
+## R code 3.2
+parameter_grid_for_p <- seq( from=0 , to=1 , length.out=1000 )
+prior <- rep( 1 , 1000 )
+likelihood <- dbinom( 6 , size=9 , prob=parameter_grid_for_p )
+posterior <- likelihood * prior
+posterior <- posterior / sum(posterior)
+```
+
+# Sampling from the Posterior Distribution
+```{r}
+## R code 3.3
+samples_of_p_from_posterior <- sample( parameter_grid_for_p , prob=posterior , size=10000 , replace=TRUE )
+## R code 3.4
+plot( samples_of_p_from_posterior )
+hist(samples_of_p_from_posterior)
+plot(density(samples_of_p_from_posterior))
+```
