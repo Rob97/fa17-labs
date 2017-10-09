@@ -6,51 +6,109 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+# Lab Goal
+
+The goal for this lab is to make sure you understand the R code used in reading 2.3 and be able to ask questions about it. This will continue the world tossing example from the reading.
+
+
 ## Using Prior Distributions for Inference
+
+Given some data, we want to infer something about the parameter values for a model. Bayesian statistics lets us construct a probability distribution for the value of the parameter for a model, assuming the model. The model and a particular value for the parameters are like a hypothesis. To calculate the probability of a hypothesis given some data, we start with an absolute probability, then multiply by a conditional probability (just like we did with trees). 
+$$p(hypothesis|data) \propto p(data|hypothesis)p(hypothesis)$$
+Here, the hypothesis is roughly "the number of water results from tossing the globe can be modeled with a binomial distribution with a parameter value = *p* for the fraction of the globe covered by water".
+
+Here we make an array representing 20 different values for *p*. Then we'll do the calculation above for each of them.
+
+
+
 ```{r}
 # define grid
 size_of_grid = 20
+
 lowest_value_of_p = 0
 highest_value_of_p = 1
+
 #which index is which value for p? 
 #like a lookup table for p
 parameter_grid_for_p <- seq( from=lowest_value_of_p , to=highest_value_of_p , length.out=size_of_grid )
 plot(parameter_grid_for_p)
+```
+
+# Prior probability
+The prior represents our prior knowledge about p. Here we use an "uninformative" prior that just assumes that, given no observations of data, we think all values for p are equally likely.
+
+```{r}
 prior_for_parameter_p <- rep( 1 , 20 )
 plot(prior_for_parameter_p)
+
 # we'll just call it prior for short
 prior <- prior_for_parameter_p
+
 # compute likelihood at each value in grid
+# this is p( data | hypothesis)
+# our only data observation is 9 tosses and getting 6 water results
+# that's where 6 and 9 come from below. look at the dbinom documentation
+# this R syntax is like making a new array and looping over parameter_grid_for_p
+#    like [dbinom(6,size=9, prob=p) for each p in parameter_grid_for_p]
 likelihood <- dbinom( 6 , size=9 , prob=parameter_grid_for_p )
+
 # compute product of likelihood and prior
 unstd.posterior <- likelihood * prior
+
+```
+
+Now, we have a "posterior" distribution for the part of the world that is covered by water. However, this isn't a probability distribution, because it does not sum to 1 (that's why we said "proportional to" instead of equals). By adding up all the values, we get the total, then divide each value by the total. This makes them all sum to 1.
+```{r}
+sum(unstd.posterior)
 # standardize the posterior, so it sums to 1
 posterior <- unstd.posterior / sum(unstd.posterior)
+
+(sum(posterior))
 ## R code 2.4
 plot( parameter_grid_for_p , posterior , type="b" ,
-    xlab="probability of water" , ylab="posterior probability" )
+    xlab="hypothesis that water fraction = p " , ylab="posterior probability" )
 mtext( "20 points" )
+
+
 ```
 
 ## Other Priors
+
+
+
 ```{r}
+
 prior_with_zero <- ifelse( parameter_grid_for_p < 0.5 , 0 , 1 )
+plot(prior_with_zero)
 prior_sharp <- exp( -5*abs( parameter_grid_for_p - 0.5 ) )
+plot(prior_sharp)
 # try the same inferences above using these. we'll increase the grid size to make the approximation better
+# plot the resulting probability distribution
+
 ## R code 3.2
 parameter_grid_for_p <- seq( from=0 , to=1 , length.out=1000 )
 prior <- rep( 1 , 1000 )
 likelihood <- dbinom( 6 , size=9 , prob=parameter_grid_for_p )
 posterior <- likelihood * prior
-posterior <- posterior / sum(posterior)
-```
+posterior <- posterior / sum(posterior) # this standardizes the posterior
 
+
+```
 # Sampling from the Posterior Distribution
+The grid approximation here works for simple models with few parameters. It gets much more complicated and uses a lot of memory (exponentially much) for many parameters (you have to make a large table of all possible values and keep track of numbers for each). 
+
+To combat that, people have made faster computational methods that approximate the posterior distribution by sampling from it (we will treat as "black boxes" for this class). Here is a simple way for sampling from the posterior distribution using R. We can use this in the reading to compare methods for inference that use the probability distribution to equivalent methods that use a collection of samples from the distribution. Right now you just need to understand what this R code does. Change the parameters and see how it varies and read the documentation.
 ```{r}
 ## R code 3.3
 samples_of_p_from_posterior <- sample( parameter_grid_for_p , prob=posterior , size=10000 , replace=TRUE )
+
 ## R code 3.4
 plot( samples_of_p_from_posterior )
 hist(samples_of_p_from_posterior)
 plot(density(samples_of_p_from_posterior))
+
 ```
+
+
+
+
