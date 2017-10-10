@@ -9,7 +9,7 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
 
 # 1. Including a few packages
-```{r}
+```{r setup, include=FALSE}
 options(warn=-1) #supressing warnings
 
 if (!require(dplyr)) { install.packages('dplyr'); require(dplyr) }
@@ -49,20 +49,19 @@ data_mgh$Longitude = round(data_mgh$Longitude, 3)
 
 View(data_mgh)
 ```
-```
 
 # 3. Missing Data
 Missing data can be a problem. If a large proportion of data is missing, we may end with results that are not representative of the population.
 
-*TODO* There are several options for date/time (at_scene_time_ts, event_clearance_ts). Figure out what proportion of reports have values. 
+*TODO* There are 2 columns for date/time (at_scene_time_ts, event_clearance_ts). Figure out what proportion of reports have values. 
 _hint_: Use the sum() and is.na() functions!
 ```{r}
 total_reports = nrow(data_mgh)
 total_reports
 
 # write code below!
-(total_reports - 1) / total_reports # replace 1 with your code to get proportion of rows that have at_scene_time_ts
-(total_reports - 1) / total_reports # replace 1 with your code to get proportion of rows that have at_scene_time_ts
+(total_reports - sum(is.na(data_mgh$at_scene_time_ts))) / total_reports 
+(total_reports - sum(is.na(data_mgh$event_clearance_ts))) / total_reports
 
 ```
 
@@ -71,7 +70,7 @@ Frequency tables are a common way to analyze data. For example, Event.Clearance.
 
 The data.table package helps you create frequency tables in R. Run the first line to read the documentation on it.
 ```{r}
-?data.table
+?data.table # read about what data.table does!
 
 #Here, we use the table() method to create a frequency table for types of crime
 freq_of_crimes <- table(data_mgh$Event.Clearance.Group)
@@ -90,13 +89,13 @@ Let's do a quick sanity check of our data by looking at the number of reports by
 crimes_by_day_of_week <- weekdays(data_mgh$event_clearance_date)
 
 # TODO: Create a frequency table of crimes by day of week
-freq_crimes_by_dow <- data.frame #replace "data.frame()" with your code!
+freq_crimes_by_dow <- table(crimes_by_day_of_week) #replace "data.frame()" with your code!
 
 # Now let's look at the frequency table!
 View(freq_crimes_by_dow)
 
 # Now let's plot this data. We haven't covered plotting too much, so be sure to ask questions about what's going on here!
-ggplot(as.data.frame(freq_crimes_by_dow),
+ggplot(as.data.frame(freq_crimes_by_dow), #ggplot can't take in data.tables, so we have to convert it back to a dataframe
        aes(x = crimes_by_day_of_week, y = Freq)) +
   geom_bar(stat = 'identity') + # create bar plot
   xlab ("Day of Week") + ylab("Count") #labeling axis
@@ -111,7 +110,14 @@ _hint_ this code should look similar to the previous block (Frequency of Crimes 
 _challenge_: Crime by time of day may vary by weekend days and weekdays. Plot the crime by times of day for weekdays and weekend days separately.
 ```{r}
 # Your code below!
+freq_crimes_by_hour <- table(data_mgh$event_clearance_hr)
 
+View(freq_crimes_by_hour)
+
+ggplot(as.data.frame(freq_crimes_by_hour), 
+       aes(x = Var1, y=Freq)) +
+  geom_bar(stat = 'identity') + 
+  xlab("Hour of Day") + ylab("Count")
 ```
 
 #7. Types of contacts
@@ -119,7 +125,8 @@ Not all crime is the same! Let's see the frequency of each type of crime (Event.
 ```{r}
 # Get a frequency table of each type of crime.
 
-crimes_by_type <- data.frame() #TODO: replace data.frame()
+crimes_by_type <- table(data_mgh$Event.Clearance.Group) #TODO: replace data.frame()
+View(crimes_by_type)
 
 ggplot(as.data.frame(crimes_by_type),
        aes(x = Var1, y = Freq)) +
@@ -136,6 +143,21 @@ _hint_: Filter the data by "Event.Clearance.Group"
 _challenge_: Do the same analysis for the "Suspicious Circumstances" group.
 ```{r}
 #TODO
+disturbances <- data_mgh %>% filter(Event.Clearance.Group == "DISTURBANCES")
+
+unique(disturbances$Event.Clearance.Group) # make sure our filter worked
+
+freq_dist <- table(disturbances$Initial.Type.Group)
+
+View(freq_dist) # inspect data and see a few groups have 0 occurences. let's filter them out!
+freq_dist <- filter(as.data.frame(freq_dist), Freq>0)
+
+# plot data. apparently these categorizations are a bit noisy!
+ggplot(freq_dist,
+       aes(x = Var1, y = Freq)) +
+  geom_bar(stat = 'identity') + # create bar plot
+  xlab ("Day of Week") + ylab("Count") + #labeling axis
+  coord_flip()
 
 ```
 
