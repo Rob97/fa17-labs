@@ -55,7 +55,6 @@ likelihood <- dbinom( 6 , size=9 , prob=parameter_grid_for_p )
 
 # compute product of likelihood and prior
 unstd.posterior <- likelihood * prior
-
 ```
 
 Now, we have a "posterior" distribution for the part of the world that is covered by water. However, this isn't a probability distribution, because it does not sum to 1 (that's why we said "proportional to" instead of equals). By adding up all the values, we get the total, then divide each value by the total. This makes them all sum to 1.
@@ -69,16 +68,10 @@ posterior <- unstd.posterior / sum(unstd.posterior)
 plot( parameter_grid_for_p , posterior , type="b" ,
     xlab="hypothesis that water fraction = p " , ylab="posterior probability" )
 mtext( "20 points" )
-
-
 ```
 
 ## Other Priors
-
-
-
 ```{r}
-
 prior_with_zero <- ifelse( parameter_grid_for_p < 0.5 , 0 , 1 )
 plot(prior_with_zero)
 prior_sharp <- exp( -5*abs( parameter_grid_for_p - 0.5 ) )
@@ -90,10 +83,21 @@ plot(prior_sharp)
 parameter_grid_for_p <- seq( from=0 , to=1 , length.out=1000 )
 prior <- rep( 1 , 1000 )
 likelihood <- dbinom( 6 , size=9 , prob=parameter_grid_for_p )
-posterior <- likelihood * prior
+posterior <- likelihood * prior_with_zero # using different prior (with zero)
 posterior <- posterior / sum(posterior) # this standardizes the posterior
+plot( parameter_grid_for_p , posterior , type="b" ,
+    xlab="hypothesis that water fraction = p " , ylab="posterior probability" )
+mtext( "1000 points" )
 
-
+parameter_grid_for_p <- seq( from=0 , to=1 , length.out=1000 )
+prior <- rep( 1 , 1000 )
+likelihood <- dbinom( 6 , size=9 , prob=parameter_grid_for_p )
+plot(likelihood)
+posterior <- likelihood * prior_sharp # using different prior (sharp)
+posterior <- posterior / sum(posterior) # this standardizes the posterior
+plot( parameter_grid_for_p , posterior , type="b" ,
+    xlab="hypothesis that water fraction = p " , ylab="posterior probability" )
+mtext( "1000 points" )
 ```
 # Sampling from the Posterior Distribution
 The grid approximation here works for simple models with few parameters. It gets much more complicated and uses a lot of memory (exponentially much) for many parameters (you have to make a large table of all possible values and keep track of numbers for each). 
@@ -110,6 +114,6 @@ plot(density(samples_of_p_from_posterior))
 
 ```
 
-Code from _Statistical Rethinking_ (McElreath 2016)
 
+Code from _Statistical Rethinking_ (McElreath 2016)
 
