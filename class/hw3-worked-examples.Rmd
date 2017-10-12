@@ -1,0 +1,145 @@
+---
+title: "Bayesian Inference: Worked Examples"
+output: html_notebook
+---
+
+## Prior and Likelihood to Posterior
+
+The first problem in Homework 1 is about figuring out which instructor is skipping out on hosting office hours. The problem is written below:
+
+Benji and Greg have become lazier and decided they sometimes wouldn't show up to the office hours. Greg decides he won't show up 15% of the time and Benji decides he won't show up 20% of the time. Say you arrive at office hours and you're heartbroken because don't see an instructor. Now you want to figure out which instructor was supposed to show up so you know who to blame.
+
+1.2 tells us to alculate the posterior distribution assuming a uniform prior.
+
+Let's decompose that:
+
+### Prior
+Our prior probability is uniform, so Pr(office hours were assigned to Benji) = Pr(office hours were assigned to Greg). Notice that this is the belief _prior_ to seeing data/ observing if an instructor showed up.
+```{r}
+prior <- c(1,1) 
+```
+This is a uniform prior because the values are the same for both options (Benji and Greg). The vector is of length 2 because there are two options: The office hours are Benji's or the office hours are Greg's (we assume that all office hours are staffed by exactly one of us.
+
+
+### Likelihood
+The likelihood function maps each possible event of evidence (in this case whether the instructor showed up or not) onto the relative number of ways the data could occur. In thie case, we know that Pr(you observe if instructor shows up at office hours | instructor is Benji) = 0.2 and Pr(you observe if instructor shows up at office hours | instructor is Greg) = 0.15.
+```{r}
+likelihood_benji <- 0.2
+likelihood_greg <- 0.15
+
+likelihood <- c(likelihood_benji, likelihood_greg)
+```
+The decision to put Benji's likelihood first was arbitrary.
+
+### Posterior 
+The posterior is proportional to the prior * likelihood. This posterior is Pr(instructor is X | you observe if instructor shows up at office hours), where X is Benji or Greg.
+```{r}
+unstd.posterior <- prior * likelihood
+```
+
+To make it a probability, we most *normalize* our posterior such that the probability of each event sums to 1. In R terms, sum(posterior) == 1.
+```{r}
+# now we have to normalize the posterior to turn it into a probability
+posterior1 <- unstd.posterior / sum(unstd.posterior)
+
+# let's make sure it's a probability distribution by ensuring it sums to 1
+sum(posterior1) == 1
+```
+
+Now let's interpret this posterior.
+```{r}
+posterior1
+```
+We can say that the Pr(the instructor is Benji | you observe no instructor at office hours) = 0.57. 
+Intuitively, this seems to makes sense because there is a greater chance that Benji skips out on office hours.
+
+## Different Ways to Update
+
+So in 1.3, you go to office hours two more times and see that the instructor does not show again and then he does (but you don't know who it is). So in total, we observe that the instructor doesn't show up 2 times and instructor shows up 1 time.
+
+Now we want to update the posterior distribution to include these 2 new data points. There are multiple ways to do this and they all end up with the same value.
+
+1. "All at once": We can incorporate all the data in one iteration. We start again with an initial prior and set our likelihood such that it accounts for all 3 observations.
+
+2. "Two iterations": We can incorporate the 2 new observations with the posterior we have already calculated. In this case, the posterior we calculated above becomes the prior and we define a likelihood that accounts for the 2 new observations.
+
+3. "Three iterations": We can incorporate the 2 new observations separately. That is, the posterior we calculated above still becomes the prior, but our likelihood function accounts for 1 new observation (instructor again doesn't show up). We then calculate a new posterior. This new posterior then becomes our prior and we define a likelihood function for our 3rd observation (instructor appears) and calculate the posterior again.
+
+I'll show these 3 different ways and show that we end up with the same posterior distribution.
+
+### Method 1: "All at Once"
+Here, we start again with a uniform prior and create a likelihood function which accounts for the plausibility of all 3 observations. Although the likelihood function gets a bit ugly, we only end up defining 1 posterior distribution.
+```{r}
+prior <- c(1,1) # uniform prior again
+
+p_benji_bails <- 0.2
+p_greg_bails <- 0.15
+
+p_benji_appears <- 1 - p_benji_bails
+p_greg_appears <- 1 - p_greg_bails
+
+# our likelihood function accounts for 3 observations: no show, no show, shows
+likelihood_benji_3_obs <- p_benji_bails * p_benji_bails * p_benji_appears
+likelihood_greg_3_obs <- p_greg_bails * p_greg_bails * p_greg_appears
+likelihood_3_observations <- c(likelihood_benji_3_obs, likelihood_greg_3_obs)
+
+unstd_posterior <- prior * likelihood_3_observations
+posterior_method_1 <- unstd_posterior / sum(unstd_posterior)
+posterior_method_1
+```
+Ok so we see that the likelihood function was a bit ugly to create, but we only had to update the posterior distribution once.
+
+### Method 2: "Two iterations"
+Previously, we had a posterior distribution (`posterior1`) which reflected the posterior distribution after observing the instructor not appearing 1 time. Now want to use that old posterior and set it to a prior to do 1 more update to account for our 2 new observations.
+```{r}
+prior <- posterior1 # our posterior now becomes our prior
+
+# our likelihood reflects 2 events: instructor doesn't show (again), instructor shows
+likelihood_benji_2_obs <- p_benji_bails * p_benji_appears
+likelihood_greg_2_obs <- p_greg_bails * p_greg_appears
+likelihood_2_observations <- c(likelihood_benji_2_obs, likelihood_greg_2_obs)  # probability each doesnt show up to theirs
+
+# now let's find a new prior
+unstd_posterior <- prior * likelihood_2_observations  # forumla
+posterior_method_2 <- unstd_posterior / sum(unstd_posterior)
+posterior_method_2
+```
+So here we didn't want to recalculate `posterior1` because we had already done that work and we instead feed that posterior in as a prior and go through another Bayesian update cycle.
+
+### Method 3: "Three iterations"
+Another more incremental way to do this is to incorporate 1 new observation for each iteration. This keeps the likelihood functions quite simple. We'll again start with `posterior1`as our prior
+```{r}
+prior2 <- posterior1 # staring off where we left off
+
+# the second time we showed up to office hours, instructor again wasn't there
+likelihood_no_show <- c(p_benji_bails, p_greg_bails)
+
+unstd_posterior <- prior2 * likelihood_no_show
+posterior2 <- unstd_posterior / sum(unstd_posterior)
+
+# ok so now we finished a cycle of updating our posterior. Let's do it again to incorporate our 3rd observation!
+prior3 <- posterior2
+likelihood_appears <- c(p_benji_appears, p_greg_appears)
+
+unstd_posterior <- prior3 * likelihood_appears
+posterior3 <- unstd_posterior / sum(unstd_posterior)
+
+posterior_method_3 <- posterior3
+```
+This way more incremental so you can inspect each step if you want to. This also makes the likelihoods trivial.
+
+
+Now let's be sure these 3 methods ended up with the same posterior distributions...
+```{r}
+# let's round these to 3 decimals so it's easier to check for equality between decimals...
+posterior_method_1 <- round(posterior_method_1, 3)
+posterior_method_2 <- round(posterior_method_2, 3)
+posterior_method_3 <- round(posterior_method_3, 3)
+
+posterior_method_1 == posterior_method_2
+posterior_method_2 == posterior_method_3
+
+posterior_method_1
+```
+So we see that all three methods of updating posteriors ended up with the same posterior distributions. Whew!
+And to interpret this, we see that the Pr(office hours were assigned to Benji | you observe instructor is no show, no show, appears) = 0.626. In words, we can say that the probability that the office hours you've been going to were assigned to Benji given you observed he didn't show up 2 times but showed up 1 time is 62.6%
