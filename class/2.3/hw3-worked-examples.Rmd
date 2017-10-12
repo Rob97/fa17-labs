@@ -9,7 +9,7 @@ The first problem in Homework 1 is about figuring out which instructor is skippi
 
 Benji and Greg have become lazier and decided they sometimes wouldn't show up to the office hours. Greg decides he won't show up 15% of the time and Benji decides he won't show up 20% of the time. Say you arrive at office hours and you're heartbroken because don't see an instructor. Now you want to figure out which instructor was supposed to show up so you know who to blame.
 
-1.2 tells us to alculate the posterior distribution assuming a uniform prior.
+1.2 tells us to determine the posterior distribution assuming a uniform prior.
 
 Let's decompose that:
 
