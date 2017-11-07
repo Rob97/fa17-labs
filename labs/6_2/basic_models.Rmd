@@ -9,4 +9,49 @@ load("data_sim1.Rda")
 data_sim1
 ```
 
+Computing distance from predicted to actual/response
+```{r}
+model_linear_function <- function(a, data) {
+  a[1] + data$x * a[2]
+}
+
+# example usage to make predictions
+# model_linear_function(c(7,5), data_sim1)
+
+model_function = model_linear_function
+measure_distance <- function(mod_params, data) {
+  diff <- data$y - model_function(mod_params, data)
+  sqrt(mean(diff ^ 2))
+}
+
+measure_distance_mad <- function(mod_params, data) {
+  diff <- data$y - model_function(mod_params, data)
+   mean(abs(diff))
+}
+```
+
+```{r}
+
+#fit a linear model for y using x
+# linear_model <- ?
+
+
+#best <- optim(c(0, 0), measure_distance, data = (#TODO the simple dataset))
+best <- optim(c(0, 0), measure_distance, data = data_sim1)
+
+best$par
+
+ggplot(data_sim1, aes(x, y)) + 
+  geom_point(size = 2, colour = "grey30") + 
+  geom_abline(intercept = best$par[1], slope = best$par[2])
+
+# make use different distance function here
+#best <- optim(c(0, 0), measure_distance, data = (#TODO the simple dataset))
+#best$par
+
+#plot results
+ggplot(data_sim1, aes(x, y)) + 
+  geom_point(size = 2, colour = "grey30") + 
+  geom_abline(intercept = best$par[1], slope = best$par[2])
+```
 
