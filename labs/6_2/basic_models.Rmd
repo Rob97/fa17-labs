@@ -5,11 +5,51 @@ output: html_notebook
 
 Loading data
 ```{r}
+library(ggplot2)
+library(dplyr)
+require(broom)
 load("data_sim1.Rda")
 data_sim1
 ```
 
-Computing distance from predicted to actual/response
+# Basic fitting of a model using R
+Let's start by fitting a linear model using the built in package.
+
+```{r}
+
+#fit a linear model for y using x
+# linear_model <- lm ( ? )
+
+
+# get the coefficients from the model
+# tidy is a trick to make the model object from lm into a data frame
+#   makes it easier to extract parts of it
+#   -> you can access them with paramters[1] to get the intercept, [2] for the slope
+parameters = tidy(linear_model)$estimate
+
+#calculate the predictions from the lm model and add them to the data_sim1
+#
+# data_sim1 <- data_sim1 %>%
+#   mutate(
+#     linear_model_prediction = ?
+#   )
+
+
+#let's plot the data and the prediction
+# hint: make the first layer have the predictions with larger sized points
+#     so the actual data can be put on top of it 
+# ggplot( ? , aes(x)) +
+#   geom_point(aes(y= ?), size = 3, colour = "red") +
+#   geom_point(aes(y= ?), size = 2, colour = "grey30")
+
+```
+Do you think this is a good model for the data set? Why?
+
+What information would help you answer the question above better?
+
+# Using different objective function for model fitting
+
+For linear models, usually the objective function looks at the residuals (difference from prediction to actual value from the data). 
 ```{r}
 model_linear_function <- function(a, data) {
   a[1] + data$x * a[2]
@@ -24,34 +64,72 @@ measure_distance <- function(mod_params, data) {
   sqrt(mean(diff ^ 2))
 }
 
+# Here's a line fit with the objective function that lm uses - squares of the residuals
+#best <- optim(c(0, 0), measure_distance, data = (#TODO the simple dataset))
+
+
+# values for the coefficients
+best$par
+
+
+
+```
+Are the parameter values the same from the two model fitting programs - using lm vs. using optim?
+
+Now we'll use a different objective function - the absolute (not squared) distance.
+
+```{r}
 measure_distance_mad <- function(mod_params, data) {
   diff <- data$y - model_function(mod_params, data)
    mean(abs(diff))
 }
+
+# make use of a different distance function here (such as mean absolute)
+#mad_fit <- optim(c(0, 0), ?, data = (#TODO the simple dataset))
+#mad_fit$par
+
+
+# put these in variables for more clarity
+mad_fit_intercept = mad_fit$par[1]
+mad_fit_slope = mad_fit$par[2]
+
+#calculate the predictions from your line fit with MAD and add them to the data_sim1
+# You can add predictions with mutate with any model, so this will work
+#   for any type of model.
+# See your code for the lm model to start from.
+
+
+# Now we plot the results with the empirical predictions for the MAD line
+# See your code for the lm model 
+
 ```
+
+# Visualizing Residuals
+
+Residuals are the difference between the outcome and the predicted outcome.
+
+Answer these questions together after making plots to compare the residuals:
+1) How do the residuals differ between the two models?
+2) Why are they different?
 
 ```{r}
 
-#fit a linear model for y using x
-# linear_model <- ?
+# add the residuals to the data set, one variable for each model you have
+# data_sim1 <- ? %>%
+#  mutate(
+#      ....
+#  )
+#
 
 
-#best <- optim(c(0, 0), measure_distance, data = (#TODO the simple dataset))
-best <- optim(c(0, 0), measure_distance, data = data_sim1)
 
-best$par
+# plot the residuals to compare them
+# ggplot(data_sim1, aes(x)) +
+#  ....
+#
 
-ggplot(data_sim1, aes(x, y)) + 
-  geom_point(size = 2, colour = "grey30") + 
-  geom_abline(intercept = best$par[1], slope = best$par[2])
 
-# make use different distance function here
-#best <- optim(c(0, 0), measure_distance, data = (#TODO the simple dataset))
-#best$par
 
-#plot results
-ggplot(data_sim1, aes(x, y)) + 
-  geom_point(size = 2, colour = "grey30") + 
-  geom_abline(intercept = best$par[1], slope = best$par[2])
 ```
+
 
