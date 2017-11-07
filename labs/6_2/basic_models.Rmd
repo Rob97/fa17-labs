@@ -1,0 +1,12 @@
+---
+title: "Running Basic Models"
+output: html_notebook
+---
+
+Loading data
+```{r}
+load("data_sim1.Rda")
+data_sim1
+```
+
+
