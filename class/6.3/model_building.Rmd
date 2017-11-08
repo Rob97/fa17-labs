@@ -1,0 +1,106 @@
+---
+title: "Building a Basic Model"
+output: html_notebook
+---
+INFO 370A
+Benjamin Xie & Greg Nelson
+University of Washington
+
+Adapted from Ch 24.3 of (R for Data Science)[http://r4ds.had.co.nz/model-building.html#what-affects-the-number-of-daily-flights], Garrett Grolemund & Hadley Wickham
+
+
+Loading packages and data. See help documentation for more on the data.
+```{r}
+if(!require(tidyverse)){install.packages("tidyverse"); library(tidyverse)} 
+if(!require(modelr)){install.packages("modelr"); library(modelr)} 
+if(!require(lubridate)){install.packages("lubridate"); library(lubridate)} 
+if(!require(nycflights13)){install.packages("nycflights13"); require(nycflights13)}
+
+?flights
+head(flights)
+```
+
+Data Cleaning
+```{r}
+daily <- flights %>% 
+  mutate(date = make_date(year, month, day)) %>%
+  group_by(date) %>%
+  summarize(n = n())
+
+# number of flights by day
+ggplot(daily, aes(date, n)) + 
+  geom_line() + 
+  labs(title = "Number of flights out of NYC by day")
+```
+
+Controlling by day of week
+```{r}
+daily <- daily %>%
+  mutate(wday = wday(date, label=TRUE))
+
+ggplot(daily, aes(wday, n)) + 
+  geom_boxplot()
+
+ggplot(daily, aes(n)) +
+  geom_histogram() + 
+  facet_wrap(~wday) +
+  labs(title = "Number of flights by day of week")
+```
+
+Using model to remove pattern of flights by day of week. 
+*TODO*: try out a nonlinear model and see what happens!
+```{r}
+# first fit model and display predictions over original data
+mod <- lm(n ~ wday, data = daily)
+
+grid <- daily %>%
+  data_grid(wday) %>% 
+  add_predictions(mod, "n")
+
+# showing prediction
+ggplot(daily, aes(n)) + 
+  geom_histogram() + 
+  facet_wrap(~wday) + 
+  geom_vline(data = grid, aes(xintercept = n), color = "red")
+
+# now compute and visualize residuals
+daily <- daily %>%
+  add_residuals(mod)
+
+ggplot(daily, aes(date, resid)) + 
+  geom_ref_line(h=6) + 
+  geom_line()
+
+daily2 <- daily
+
+# given residuals, maybe we want to remove odd days (Mother's Day, July 4th)
+daily2 <- daily2 %>%
+  filter(resid > -100)
+```
+
+Looking at effect of time of year
+```{r}
+if(!require(splines)){install.packages("splines"); library(splines)} 
+if(!require(MASS)){install.packages("MASS"); require(MASS)}
+```
+
+Using robust fitting of linear modles (RLM) to create a model with interactions between day of week and time of year
+```{r}
+mod <- MASS::rlm(n ~ wday * ns(date, df=5), data = daily)  # degrees of freedom was arbitrary choice
+
+# plot of models
+daily2 %>%
+  data_grid(wday, date = seq_range(date, n=13)) %>%
+  add_predictions(mod) %>%
+  ggplot(aes(date, pred, color=wday)) + 
+    geom_line()+
+    geom_point()
+
+# now compute and visualize residuals
+daily2 <- daily2 %>%
+  add_residuals(mod)
+
+ggplot(daily2, aes(date, resid)) + 
+  geom_ref_line(h=6) + 
+  geom_line()
+```
