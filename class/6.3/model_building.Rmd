@@ -1,18 +1,130 @@
 ---
-title: "Building a Basic Model"
+title: "Class 6.3: Building Basic Models"
 output: html_notebook
 ---
 INFO 370A
 Benjamin Xie & Greg Nelson
 University of Washington
 
-Adapted from Ch 24.3 of (R for Data Science)[http://r4ds.had.co.nz/model-building.html#what-affects-the-number-of-daily-flights], Garrett Grolemund & Hadley Wickham
 
+Adapted from Ch 23, 24 of (R for Data Science)[http://r4ds.had.co.nz], Garrett Grolemund & Hadley Wickham
 
-Loading packages and data. See help documentation for more on the data.
 ```{r}
 if(!require(tidyverse)){install.packages("tidyverse"); library(tidyverse)} 
 if(!require(modelr)){install.packages("modelr"); library(modelr)} 
+if(!require(splines)){install.packages("splines"); require(splines)}
+```
+
+# Interaction Effects
+Interactions (continuous & categorical)
+
+`sim3`: categorical predictor (x2) and continuous predictor (x1)
+```{r}
+head(sim3)
+
+ggplot(sim3, aes(x1, y)) + 
+  geom_point(aes(color = x2))
+```
+
+2 possible models for `sim3`
+- `+` makes it so model estimates each effect *independent* of all others
+- `*` model can fit interaction
+```{r}
+mod1 <- lm(y ~ x1 + x2, 
+           data = sim3)
+mod2 <- lm(y ~ x1 * x2, 
+           data = sim3) 
+
+# y = a_0 + a_1 * x1 + a_2 * x2 + a_12 * x1 * x2
+
+```
+
+To visualize these models, 2 new tricks:
+- pass both `x1` and `x2` for `data_grid()`
+- use `gather_predictions()` to generate predictions from both models simultaneously, adding prediction as a row
+  - complement is `spread_predictions()`, which adds each prediction to a new column
+```{r}
+grid <- sim3 %>%
+  data_grid(x1, x2) %>%
+  gather_predictions(mod1, mod2)
+
+grid
+
+# data_sim3 <- sim3 %>%
+#   mutate(
+#     mod1 = mad_fit_intercept + mad_fit_slope * data_sim1$x
+#   )
+
+ggplot(sim3, aes(x1, y, color = x2)) + 
+  geom_point() + 
+  geom_line(data = grid, aes(y = pred)) +
+  facet_wrap(~model)
+```
+
+Judging model using residuals
+- residuals in mod1 show pattern (which is bad)
+```{r}
+sim3 <- sim3 %>% 
+  gather_residuals(mod1, mod2)
+
+head(sim3)
+
+ggplot(sim3, aes(x1, resid, color = x2)) + 
+  geom_point() +
+  facet_grid(model ~ x2)
+```
+
+
+# Looking at non-linear data
+
+Generating some non-linear data
+```{r}
+sim5 <- tibble(
+  x = seq(0, 3.5 * pi, length = 50),
+  y = 4 * sin(x) + rnorm(length(x))*2
+)
+
+# plotting random points
+ggplot(sim5, aes(x, y)) +
+  geom_point()
+```
+
+
+```{r}
+# creating a bunch of "polynomial" models with various degrees of freedom
+mod1 <- lm(y ~ ns(x, df=1), data=sim5)
+mod2 <- lm(y ~ ns(x, df=2), data=sim5)
+mod3 <- lm(y ~ ns(x, df=3), data=sim5)
+mod4 <- lm(y ~ ns(x, df=4), data=sim5)
+mod5 <- lm(y ~ ns(x, df=5), data=sim5)
+mod20 <- lm(y ~ ns(x, df=20), data=sim5)
+
+grid <- sim5 %>%
+  data_grid(x = seq_range(x, n= 50, expand = 0.1)) %>%
+  gather_predictions(mod1, mod2, mod3, mod4, mod5, mod20, .pred = "y")
+
+# plotting predictions
+ggplot(sim5, aes(x,y)) +
+  geom_point() + 
+  geom_line(data = grid, color = "red") + 
+  facet_wrap(~ model)
+```
+
+Looking at residuals
+```{r}
+#calculating and plotting residuals
+sim5 %>%
+  gather_residuals(mod1, mod2, mod3, mod4, mod5, mod20) %>%
+  ggplot(aes(x, resid)) + 
+  geom_point() + 
+  facet_wrap(~model)
+```
+
+
+# Factors affecting number of flights
+
+Loading packages and data. See help documentation for more on the data.
+```{r}
 if(!require(lubridate)){install.packages("lubridate"); library(lubridate)} 
 if(!require(nycflights13)){install.packages("nycflights13"); require(nycflights13)}
 
@@ -30,6 +142,7 @@ daily <- flights %>%
 # number of flights by day
 ggplot(daily, aes(date, n)) + 
   geom_line() + 
+  geom_point() +
   labs(title = "Number of flights out of NYC by day")
 ```
 
@@ -48,7 +161,6 @@ ggplot(daily, aes(n)) +
 ```
 
 Using model to remove pattern of flights by day of week. 
-*TODO*: try out a nonlinear model and see what happens!
 ```{r}
 # first fit model and display predictions over original data
 mod <- lm(n ~ wday, data = daily)
@@ -69,13 +181,14 @@ daily <- daily %>%
 
 ggplot(daily, aes(date, resid)) + 
   geom_ref_line(h=6) + 
-  geom_line()
+  geom_line() + 
+  labs(title = "Residuals after linear model for day of week")
 
 daily2 <- daily
 
 # given residuals, maybe we want to remove odd days (Mother's Day, July 4th)
-daily2 <- daily2 %>%
-  filter(resid > -100)
+# daily2 <- daily2 %>%
+  # filter(resid > -100)
 ```
 
 Looking at effect of time of year
