@@ -1,0 +1,148 @@
+---
+title: "Class 6.3: Building Basic Models"
+output: html_notebook
+---
+INFO 370A
+Benjamin Xie & Greg Nelson
+University of Washington
+
+
+Adapted from (Cross-Validation for Predictive Analytics Using R)[http://r4ds.had.co.nz], Sergio Venturini
+
+# 0: Loading packages
+```{r setup}
+if(!require(tidyverse)){install.packages("tidyverse"); library(tidyverse)} 
+if(!require(modelr)){install.packages("modelr"); library(modelr)} # modeling package
+if(!require(splines)){install.packages("splines"); require(splines)} # for natural splines ("polynomial") models
+
+```
+
+# Looking at non-linear data
+
+# 1. Generating some non-linear data
+```{r}
+sim5 <- tibble(
+  x = seq(0, 3.5 * pi, length = 500),
+  y = 4 * sin(x) + rnorm(length(x))*2
+)
+
+# plotting random points
+ggplot(sim5, aes(x, y)) +
+  geom_point()
+```
+
+# 2. 
+```{r}
+n_df <- 30 # number of degrees of freedom to try out
+df <- 1:n_df
+
+n_data <- nrow(sim5) 
+split <- 0.9 # proportion of data to use for training
+
+# getting split of data for training and test
+train_indices <- sample(seq(1, n_data), size = n_data*split) 
+
+train_data <- sim5[train_indices,]
+test_data <-  sim5[-train_indices,]
+
+results <- list()
+
+for(degf in 1:n_df) {
+  results[[degf]] <- lm(y ~ ns(x, df = degf), data=train_data)
+}
+
+results[[1]]
+
+```
+```{r}
+grid_train <- train_data %>%
+  data_grid(x) %>%
+  gather_predictions(results[[1]], results[[4]], results[[30]], .pred="y")
+
+ggplot(train_data, aes(x,y)) +
+  geom_point() + 
+  geom_line(data = grid_train, aes(color = model)) + 
+  labs(title="Natural spline ('polynomial') models over training data")
+
+grid_test <- test_data %>%
+  data_grid(x) %>%
+  gather_predictions(results[[1]], results[[4]], results[[30]], .pred="y")
+
+ggplot(test_data, aes(x,y)) +
+  geom_point() + 
+  geom_line(data = grid_test, aes(color = model)) + 
+  labs(title="Natural spline ('polynomial') models over test data")
+```
+
+
+Now let's determine train and test error
+```{r}
+# mean squared errors for training and test sets
+mse_train <- list() 
+mse_test <- list()
+
+for (i in 1:n_df) {
+  predict_train <- train_data %>% gather_predictions(results[[i]])
+  squared_error_train <- mapply(function(actual, pred) (actual-pred)^2, 
+                                train_data$y, predict_train$pred)
+  mse_train[i] <- mean(squared_error_train)
+  
+  predict_test <- test_data %>% gather_predictions(results[[i]])
+  squared_error_test <- mapply(function(actual, pred) (actual-pred)^2, 
+                               test_data$y, predict_test$pred)
+  mse_test[i] <- mean(squared_error_test)
+}
+
+mse_data <- data.frame(x=1:length(mse), train_error=unlist(mse_train), test_error=unlist(mse_test))
+
+# 5 plots with lowest test_error. Looks like df = 6 reduces test error the most (may vary a bit depending on how data created)
+head(mse_data %>% arrange(test_error))
+
+ggplot(mse_data, aes(x)) + 
+  geom_line(aes(y=train_error, color="Training Error")) +
+  geom_line(aes(y=test_error, color="Test Error")) + 
+  labs(y = "Mean Squared Error")
+```
+Mean squared error is the same as the (residuals)^2. 
+We can make the same plot again by using residuals. This makes the code a bit cleaner using `add_residuals()`
+```{r}
+# mean squared errors for training and test sets
+mse_train <- list() 
+mse_test <- list()
+
+for (i in 1:n_df) {
+  residuals_train <- train_data %>% add_residuals(results[[i]]) # calculating residuals
+  mse_train[i] <- mean(residuals_train$resid^2) # mean of square of residuals to get mean squared error
+  
+  residuals_test <- test_data %>% add_residuals(results[[i]])
+  mse_test[i] <- mean(residuals_test$resid^2)
+}
+
+mse_data <- data.frame(x=1:length(mse), train_error=unlist(mse_train), test_error=unlist(mse_test))
+
+ggplot(mse_data, aes(x)) + 
+  geom_line(aes(y=train_error, color="Training Error")) +
+  geom_line(aes(y=test_error, color="Test Error")) + 
+  labs(y = "Mean Squared Error")
+```
+
+
+```{r}
+predict_train <- train_data %>% add_residuals(results[[30]])
+mean(predict_train$resid^2)
+squared_error_train <- mapply(function(actual, pred) (actual-pred)^2, 
+                                train_data$y, predict_train$pred)
+
+
+max(unlist(squared_error_train))
+train_data[which.max(unlist(squared_error_train)),]
+
+mean(squared_error_train)
+
+ggplot(train_data, aes(x,y)) + 
+  geom_point() + 
+  geom_line(data=predict_train, aes(x,pred))
+
+```
+
+
