@@ -95,7 +95,7 @@ for (i in 1:n_df) {
   mse_test[i] <- mean(squared_error_test)
 }
 
-mse_data <- data.frame(x=1:length(mse), train_error=unlist(mse_train), test_error=unlist(mse_test))
+mse_data <- data.frame(x=1:length(mse_train), train_error=unlist(mse_train), test_error=unlist(mse_test))
 
 # 5 plots with lowest test_error. Looks like df = 6 reduces test error the most (may vary a bit depending on how data created)
 head(mse_data %>% arrange(test_error))
@@ -122,7 +122,7 @@ for (i in 1:n_df) {
   mse_test[i] <- mean(residuals_test$resid^2)
 }
 
-mse_data <- data.frame(x=1:length(mse), train_error=unlist(mse_train), test_error=unlist(mse_test))
+mse_data <- data.frame(x=1:length(mse_train), train_error=unlist(mse_train), test_error=unlist(mse_test))
 
 ggplot(mse_data, aes(x)) + 
   geom_line(aes(y=train_error, color="Training Error")) +
@@ -134,7 +134,7 @@ ggplot(mse_data, aes(x)) +
 
 # 6 Loading caret package, data
 *THIS WILL TAKE AWHILE TO INSTALL*
-```{r setup}
+```{r}
 if(!require(caret)){install.packages("caret", dependencies = c("Depends", "Suggests")); require(caret)}
 
 if(!require(RCurl)){install.packages("RCurl"); require(RCurl)}
@@ -169,6 +169,8 @@ str(cv_splits)
 ```
 
 # 9 Fitting a models to tune parameters
+
+Be patient. Fitting this many models takes time!
 ```{r}
 cs_data_train <- cs_data[train_set, ]
 cs_data_test <- cs_data[-train_set, ]
