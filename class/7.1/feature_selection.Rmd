@@ -1,0 +1,75 @@
+---
+title: "Feature Selection w/ Caret"
+output: html_notebook
+---
+
+# Feature Selection with the Caret R Package
+
+- How to remove redundant features from dataset
+- How to rank features
+- How to select features using recursive feature elimination
+
+https://machinelearningmastery.com/feature-selection-with-the-caret-r-package/
+
+```{r}
+if(!require(mlbench)){install.packages("mlbench"); require(mlbench)} # common datasets to use
+if(!require(caret)){install.packages("caret", dependencies = c("Depends", "Suggests")); require(caret)} # ML package and its dependencies. This will take awhile!
+set.seed(370)
+```
+
+We will look at data relating to diabetes among Pima Indians. Notice how the outcome variable is categorical. This makes this a *classification* problem. When the outcome variable is continuous, it is a *regression* problem.
+```{r}
+data("PimaIndiansDiabetes")
+?PimaIndiansDiabetes
+head(PimaIndiansDiabetes)
+```
+
+
+Removing redundant features (absolute correlation cutoff)
+```{r}
+corr_matrix <- cor(PimaIndiansDiabetes[,1:8]) # correlations between all predictor vars
+corr_matrix
+
+cutoff <- 0.5 # should be higher in practice
+
+highly_corr <- findCorrelation(corr_matrix, cutoff=cutoff)
+print(colnames(PimaIndiansDiabetes)[highly_corr]) # age is highly correalted with pregnant
+```
+
+Ranking features by importance
+```{r}
+control <- trainControl(method="repeatedcv", number = 10, repeats = 3)
+
+model <- train(diabetes ~., data=PimaIndiansDiabetes, method = "knn", preProcess = "scale", trControl = control)
+
+importance <- varImp(model)
+
+ggplot(importance)
+```
+
+Automatic Feature Selection
+
+Uses different subsets of the predictor variables to build many models to identify variables that can be removed without compromising the accuracy model in a major way.
+```{r}
+# control using random forest
+control <- rfeControl(functions = rfFuncs, method="cv", number=10)
+results <- rfe(PimaIndiansDiabetes[,1:8], PimaIndiansDiabetes[,9], sizes = c(1:8), rfeControl = control) # this will take AWHILE...
+
+results
+ggplot(results)
+
+# chosen features
+predictors(results)
+```
+
+
+## More on caret
+*caret* package (short for classification and regression training) contains functions to streamline the model training process for regression (output is continuous) and classification (output is categorical) problems. The package utilizes a number of R packges and all of them can be installed with the following command:
+
+`install.packages("caret", dependencies = c("Depends", "Suggests"))`
+
+Helpful Links:
+- [Online book](http://topepo.github.io/caret/index.html)
+- [Main help page](http://caret.r-forge.r-project.org/)
+
+
