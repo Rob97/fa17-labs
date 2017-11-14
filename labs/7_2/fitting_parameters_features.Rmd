@@ -1,0 +1,79 @@
+---
+title: "Fitting model parameters & features"
+output: html_notebook
+---
+
+# Fitting model parameters & features
+The objective of this lab is to have you practice fitting a model parameters and predictor variables.
+
+You will apply what we have learned in class. Reference code from class and from the readings may be helpful. - (Class 7.1 Code on Cross Validation, Feature Selection)[https://github.com/info370/fa17-labs/tree/master/class/7.1]
+- (Reading on Cross-Validation)[https://docs.google.com/document/d/1uNbgjp9CrxxwDrgLEDrf4IkJrUwZKO5TqxblWwRZkko/edit]
+- (Slides on Cross-Validation, Feature Selection)[https://docs.google.com/presentation/d/1znngaVSsDb-ueXCPjdwPhdCEbjuged2J37Q69w0T2_M/edit?usp=sharing]
+
+
+```{r setup}
+if(!require(mlbench)){install.packages("mlbench"); require(mlbench)} # common datasets to use
+if(!require(caret)){install.packages("caret", dependencies = c("Depends", "Suggests")); require(caret)} # ML package and its dependencies. This will take awhile!
+if(!require(dplyr)){install.packages("dplyr"); require(dplyr)}
+set.seed(370)
+```
+
+## 1. Look at the data
+```{r}
+data(BostonHousing)
+?BostonHousing
+
+df_boston <- BostonHousing[, !names(BostonHousing) %in% c("chas")] # removing charles river tract b/c not numeric
+head(df_boston)
+```
+
+# Feature Selection
+
+## 2. Correlation of Features
+*TODO*: Create a correlation matrix and determine if any features are highly correalted
+```{r}
+ 
+```
+*TODO*: Determine if which features are highly correlated
+
+## Ranking features by importance
+*TODO*: Rank features by importance using K-Nearest Neighbors (KNN). Plot the performance
+- Use a k-fold cross-validation ("repeatedcv") with k=5 folds, repeated 3 times for control.
+```{r}
+ 
+```
+
+## Automatic Feature Selection
+*TODO* Use and `rfe` to do automatic feature selection. You'll want to pass in the control provided.
+```{r}
+# control using random forest
+control <- rfeControl(functions = rfFuncs, method="cv", number=10)
+
+```
+
+*TODO*: Select the most important features (up to 10) and use only those parameters moving forward
+```{r}
+selected_features <- c() #TODO
+```
+
+
+# Fitting parameters
+Now it's time to try fitting different models. See more about models here: http://topepo.github.io/caret/available-models.html
+
+Split the data into a training and test set
+*TODO* Use `createDataPartition` to partition the data
+```{r}
+ 
+```
+
+*TODO*: Fit a generalized linear model
+- Use `expand.grid()` to create a dataframe from all combinations of alpha (start with c(0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0) and adjust accordingrtly) and lambda values 1e-5, 1e-4, ... 1
+```{r}
+ 
+```
+
+*TODO*: Fit a penalized logistic regression model (plr)
+```{r}
+
+```
+
