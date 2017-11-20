@@ -1,0 +1,222 @@
+---
+title: "Common Models"
+output: html_notebook
+---
+
+
+
+```{r setup}
+if(!require(mlbench)){install.packages("mlbench"); require(mlbench)} # common datasets to use
+if(!require(tidyverse)){install.packages("tidyverse"); library(tidyverse)} 
+if(!require(modelr)){install.packages("modelr"); library(modelr)} 
+
+# some dependencies for caret that aren't automatically installed
+if(!require(ModelMetrics)){install.packages("ModelMetrics"); require(ModelMetrics)}
+if(!require(recipes)){install.packages("recipes"); require(recipes)}
+if(!require(DEoptimR)){install.packages("DEoptimR"); require(DEoptimR)}
+
+if(!require(caret)){install.packages("caret"); require(caret)} # ML package WITHOUT its dependencies. Should not take as long
+if(!require(dplyr)){install.packages("dplyr"); require(dplyr)}
+set.seed(370)
+
+# if(!require(caret)){install.packages("caret", dependencies = c("Depends", "Suggests")); require(caret)} # ML package and its dependencies. Do NOT need to run for class. Would be good to install for use of caret in general. This will take awhile!
+```
+
+# Getting data
+```{r}
+# data for regression
+?BostonHousing
+data(BostonHousing)
+df_boston <- BostonHousing
+head(df_boston)
+
+
+# data for classification task
+?iris
+data("iris")
+df_iris <- iris
+head(df_iris)
+```
+
+# Splitting Data into train and test sets
+```{r}
+# splitting boston data into train+validate and test sets
+
+split_proportion = 0.8 # specify proportion of data used for training
+
+# select outcome variable
+outcome <- df_boston %>% dplyr::select(medv)
+
+# randomly select indices for train/validate set
+train_ind <- createDataPartition(outcome$medv, p = split_proportion, list = FALSE)
+df_boston_train <- df_boston[train_ind,] # get training data
+df_boston_test <- df_boston[-train_ind,] # get test data
+
+boston_test_x <- df_boston %>% dplyr::select(-medv) # select predictor data for test set
+boston_test_y <- df_boston %>% dplyr::select(medv) # select outcome data for test set
+
+# splitting iris data into train and test
+outcome <- df_iris %>% dplyr::select(Species)
+
+train_ind <- createDataPartition(outcome$Species, p = split_proportion, list = FALSE)
+df_iris_train <- df_iris[train_ind,]
+df_iris_test <- df_iris[-train_ind,]
+
+iris_test_x <- df_iris_test %>% dplyr::select(-Species)
+iris_test_y <- df_iris_test %>% dplyr::select(Species)
+```
+
+
+Defining how we're evaluating models (10 fold cross-validation, repeated 2 times)
+```{r}
+ctrl <- trainControl(method = "cv", number=5) # 5 fold cross validation (because I want code to run quickly in class)
+
+# ctrl <- trainControl(method = "repeatedcv", number=10, repeats=3) # 10 fold cross-validation, repeated 3 times. better way to do it but takes longer.
+```
+
+
+# Regression Models
+
+For regression, the output is continuous or ordered
+
+## Linear Regression
+```{r}
+model_lm <- train(medv ~ ., # outcome is "medv", all other columns are predictors
+                  data = df_boston_train, # training data
+                  method = "lm", # model type (linear model)
+                  trControl=ctrl) # evaluation method
+                  
+
+# coefficients
+model_lm$finalModel
+
+# getting performance on test set (as root mean squared error (L2 norm), R^2, mean absolute error (L1 norm))
+predict_boston_lm <- predict(model_lm, boston_test_x)
+postResample(predict_boston_lm, boston_test_y$medv)
+
+# creating grid of data to plot results for test set
+grid <- df_boston_test %>%
+  gather_predictions(model_lm)
+
+# getting important variales
+varImp(model_lm)
+
+ggplot(df_boston_test, aes(lstat, medv, color = rm)) + 
+  geom_point() + 
+  geom_line(data = grid, aes(y = pred))
+```
+
+## SVM for regression
+```{r}
+model_svm <- train(medv ~ .,
+                  data = df_boston_train,
+                  method = "svmRadial",
+                  trControl=ctrl,   # Radial kernel
+                  tuneLength = 10)
+
+# getting performance on test set (as root mean squared error (L2 norm), R^2, mean absolute error (L1 norm))
+predict_boston_svm <- predict(model_svm, boston_test_x)
+postResample(predict_boston_svm, boston_test_y$medv)
+
+# creating grid of data to plot results
+grid <- df_boston_test %>%
+  gather_predictions(model_svm)
+
+varImp(model_svm) # getting most important variables
+
+# only plotting prediction along most important variables
+ggplot(df_boston_test, aes(nox, medv)) + 
+  geom_point() + 
+  geom_line(data = grid, aes(y = pred))
+
+ggplot(df_boston_test, aes(lstat, medv)) + 
+  geom_point() + 
+  geom_line(data = grid, aes(y = pred))
+```
+
+
+## Generalized additive model using splines
+```{r}
+if(!require(gam)){install.packages("gam"); require(gam)} # only need this is dependencies of caret were not installed
+
+
+# takes awhile to run...
+model_spline <- train(medv ~ ., # outcome is "medv", predictors=all other columns
+                  data = df_boston_train,  # training data
+                  trControl=ctrl, # evaluation method
+                  method = "gamSpline", # model: generalized addive model using splines
+                  tuneLength = 30) # number of parameters to try
+
+model_spline
+
+# getting performance on test set (as root mean squared error (L2 norm), R^2, mean absolute error (L1 norm))
+predict_boston_spline <- predict(model_spline, boston_test_x)
+postResample(predict_boston_spline, boston_test_y$medv)
+
+# creating grid of data to plot results
+grid <- df_boston_test %>%
+  gather_predictions(model_spline)
+
+varImp(model_spline) # getting most important variables
+
+# only plotting prediction along most important variables
+ggplot(df_boston_test, aes(nox, medv)) + 
+  geom_point() + 
+  geom_line(data = grid, aes(y = pred))
+
+ggplot(df_boston_test, aes(lstat, medv)) + 
+  geom_point() + 
+  geom_line(data = grid, aes(y = pred))
+```
+
+# Classification
+
+## Naive Bayes
+```{r}
+if(!require(klaR)){install.packages("klaR"); require(klaR)} # only need this is dependencies of caret were not installed
+
+# fit model
+model_nb <- train(Species ~ . , method="nb", data=df_iris_train, trControl = ctrl)
+
+# predictions using model
+predict_iris <- predict(model_nb, iris_test_x)
+
+# performance
+confusionMatrix(predict_iris, iris_test_y$Species)
+```
+
+### Naive Bayes w/ manually set prior
+
+Default is that prior probability is set to proportions of training data. You can also set your own prior
+```{r}
+# setting our priors here
+prior_iris <- c(2,1,1) # doesn't affect
+# prior_iris <- c(2,0,1) # notice the 0 prior here. this would really change the results!
+
+prior_iris <- prior_iris / sum(prior_iris)
+
+model_nb <- train(Species ~ . , method="nb", data=df_iris_train, trControl = ctrl,
+                  prior=prior_iris) # <- passing in our own prior here
+```
+
+## Decision Tree
+```{r}
+if(!require(rpart.plot)){install.packages("rpart.plot"); require(rpart.plot)} # only need this is dependencies of caret were not installed
+
+model_dec_tree <- train(Species ~ ., 
+                        data = df_iris_train,
+                        method = "rpart",
+                        trControl = ctrl,
+                        tuneLength = 10) # try 10 reasonable parameter values. No more guessing parameter ranges!
+
+model_dec_tree
+
+# looking at decision tree
+prp(model_dec_tree$finalModel)
+
+# predictions using model
+predict_iris <- predict(model_dec_tree, newdata = iris_test_x)
+
+# performance (via confusion matrix)
+confusionMatrix(predict_iris, iris_test_y$Species)
+```
