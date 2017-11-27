@@ -1,0 +1,80 @@
+---
+title: "Fitting model parameters & features"
+output: html_notebook
+---
+
+# Fitting model parameters & features
+The objective of this lab is to have you practice fitting a model parameters and predictor variables.
+
+You will apply what we have learned in class. Reference code from class and from the readings may be helpful. - (Class 7.1 Code on Cross Validation, Feature Selection)[https://github.com/info370/fa17-labs/tree/master/class/7.1]
+- (Reading on Cross-Validation)[https://docs.google.com/document/d/1uNbgjp9CrxxwDrgLEDrf4IkJrUwZKO5TqxblWwRZkko/edit]
+- (Slides on Cross-Validation, Feature Selection)[https://docs.google.com/presentation/d/1znngaVSsDb-ueXCPjdwPhdCEbjuged2J37Q69w0T2_M/edit?usp=sharing]
+
+
+```{r setup}
+if(!require(mlbench)){install.packages("mlbench"); require(mlbench)} # common datasets to use
+
+# some dependencies for caret that aren't automatically installed
+if(!require(ModelMetrics)){install.packages("ModelMetrics"); require(ModelMetrics)}
+if(!require(recipes)){install.packages("recipes"); require(recipes)}
+if(!require(DEoptimR)){install.packages("DEoptimR"); require(DEoptimR)}
+
+if(!require(caret)){install.packages("caret", dependencies = c("Depends", "Suggests")); require(caret)} # ML package and its dependencies. This will take awhile!
+if(!require(dplyr)){install.packages("dplyr"); require(dplyr)}
+set.seed(370)
+```
+
+## 1. Look at the data
+```{r}
+data(BostonHousing)
+?BostonHousing
+
+df_boston <- BostonHousing[, !names(BostonHousing) %in% c("chas")] # removing charles river tract b/c not numeric
+head(df_boston)
+```
+
+# Feature Selection
+
+## 2. Correlation of Features
+*TODO*: Create a correlation matrix and determine if any features are highly correalted
+```{r}
+cutoff <- 0.6 # should be higher in practice
+
+```
+*TODO*: Determine if which features are highly correlated
+
+## Ranking features by importance
+*TODO*: Rank features by importance using K-Nearest Neighbors (KNN). Plot the performance
+- Use a k-fold cross-validation ("repeatedcv") with k=5 folds, repeated 3 times for control.
+```{r}
+
+```
+
+## Automatic Feature Selection
+*TODO* Use and `rfe` to do automatic feature selection. You'll want to pass in the control provided.
+```{r}
+
+```
+
+*TODO*: Select the most important features (up to 10) and use only those parameters moving forward
+```{r}
+selected_features <- c()
+```
+
+
+# Fitting parameters
+Now it's time to try fitting different models. See more about models here: http://topepo.github.io/caret/available-models.html
+
+*TODO*: Fit a generalized linear model
+- Use `expand.grid()` to create a dataframe from all combinations of alpha (start with c(0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0) and adjust accordingrtly) and lambda values 1e-5, 1e-4, ... 1
+```{r}
+
+```
+
+*TODO*: Fit a penalized logistic regression model (plr) with all features (not just the ones we previously selected) to predict if a neighborhood is charles river tract or not (chas).
+```{r}
+df_boston_all <- BostonHousing # because we previously removed the feature "chas"
+plr_grid <- expand.grid(lambda = c(1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1,1, 1e2, 1e3, 1e4, 1e5), cp = c("bic", "aic"))
+
+```
+
