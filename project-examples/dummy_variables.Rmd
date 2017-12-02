@@ -1,0 +1,60 @@
+---
+title: "Training with dummy variables"
+output: html_notebook
+---
+
+```{r}
+library(mlbench)
+library(caret)
+library(dplyr)
+```
+
+# making same random data
+```{r}
+num_rows <- 30
+df <- data.frame(seq(1,num_rows), 
+                 floor(runif(num_rows)*3),# random numbers between 0 and 2
+                 ceiling(runif(num_rows)*3), # random numbers between 1 and 3
+                 ceiling(runif(num_rows)*5)) # random grades between 1 and 5
+
+colnames(df) <- c("id", "survey_response_1", "survey_response_2", "grade")
+
+# to change a bunch of columns to factors or numeric
+names <- c('survey_response_1', 'survey_response_2')
+df[,names] <- lapply(df[,names], as.numeric)
+# df[,names] <- lapply(df[,names], as.factor)
+
+# filter before you cast it as factor
+df <- df %>% filter(survey_response_1>0)
+
+
+# dummy variables MUST be factors
+df$survey_response_1 <- as.factor(df$survey_response_1)
+df$survey_response_2 <- as.factor(df$survey_response_2)
+
+head(df)
+```
+
+# making dataframe w/ dummy variables
+```{r}
+?dummyVars #really neat caret function we'll be using
+
+dmy <- dummyVars(~ survey_response_1 + survey_response_2, data=df) # notice how we specify which columns to "dumbify""
+
+# dmy <- dummyVars(~ ., data=df) # run this to dumbify all variables that are factors
+
+df_dummy <- data.frame(predict(dmy, newdata = df), df$grade)
+
+head(df_dummy)
+```
+
+# training a model w/ dummy variables
+```{r}
+control <- trainControl(method="cv", repeats = 3)
+model <- train(df.grade ~ ., data=df_dummy, method = "knn", trControl = control)
+model
+
+importance <- varImp(model)
+importance
+```
+
