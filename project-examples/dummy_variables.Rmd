@@ -6,10 +6,7 @@ output: html_notebook
 ```{r}
 library(mlbench)
 library(caret)
-<<<<<<< HEAD
 library(dplyr)
-=======
->>>>>>> origin/master
 ```
 
 # making same random data
@@ -22,7 +19,6 @@ df <- data.frame(seq(1,num_rows),
 
 colnames(df) <- c("id", "survey_response_1", "survey_response_2", "grade")
 
-<<<<<<< HEAD
 # to change a bunch of columns to factors or numeric
 names <- c('survey_response_1', 'survey_response_2')
 df[,names] <- lapply(df[,names], as.numeric)
@@ -31,9 +27,6 @@ df[,names] <- lapply(df[,names], as.numeric)
 # filter before you cast it as factor
 df <- df %>% filter(survey_response_1>0)
 
-
-=======
->>>>>>> origin/master
 # dummy variables MUST be factors
 df$survey_response_1 <- as.factor(df$survey_response_1)
 df$survey_response_2 <- as.factor(df$survey_response_2)
@@ -56,11 +49,9 @@ head(df_dummy)
 
 # training a model w/ dummy variables
 ```{r}
-<<<<<<< HEAD
 control <- trainControl(method="cv", repeats = 3)
-=======
-control <- trainControl(method="repeatedcv", number = 10, repeats = 3)
->>>>>>> origin/master
+# control <- trainControl(method="repeatedcv", number = 10, repeats = 3)
+
 model <- train(df.grade ~ ., data=df_dummy, method = "knn", trControl = control)
 model
 
